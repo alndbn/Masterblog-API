@@ -2,21 +2,55 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # This will enable CORS for all routes
+CORS(app)
 
 POSTS = [
     {"id": 1, "title": "First post", "content": "This is the first post."},
     {"id": 2, "title": "Second post", "content": "This is the second post."},
+    {"id": 3, "title": "Flask Tips", "content": "Understanding routes and methods in Flask."},
+    {"id": 4, "title": "My Coding Journey", "content": "Today I learned how to build a REST API."},
+    {"id": 5, "title": "Frontend Fun", "content": "CSS Grid and Flexbox can be tricky but powerful."},
+    {"id": 6, "title": "Backend Basics", "content": "POST, GET, DELETE and PUT are essential HTTP methods."},
 ]
 
 
 @app.route('/api/posts', methods=['GET'])
 def get_posts():
-    return jsonify(POSTS)
+    """returns a list of all blog posts"""
+    sort_field = request.args.get("sort")
+    direction = request.args.get("direction")
+
+    if not sort_field:
+        return jsonify(POSTS), 200
+
+    sort_field = sort_field.lower()
+    direction = (direction or "asc").lower()
+
+    if sort_field not in ("title", "content"):
+        return jsonify({
+            "error": "Invalid sort field. Allowed values are 'title' or 'content'."
+        }), 400
+
+    if direction not in ("asc", "desc"):
+        return jsonify({
+            "error": "Invalid direction. Allowed values are 'asc' or 'desc'."
+        }), 400
+
+    reverse = direction == "desc"
+
+    sorted_posts = sorted(
+        POSTS,
+        key=lambda post: post[sort_field].lower(),
+        reverse=reverse
+    )
+
+    return jsonify(sorted_posts), 200
+
 
 
 @app.route('/api/posts', methods=['POST'])
 def add_post():
+    """add a new blog post, expects JSON"""
     data = request.get_json()
 
     if not data:
@@ -45,6 +79,7 @@ def add_post():
 
 @app.route('/api/posts/<int:post_id>', methods=['DELETE'])
 def delete_post(post_id):
+    """Delete a post by ID, returns status 200 or error message 404"""
     global POSTS
 
     post_to_delete = next((post for post in POSTS if post["id"] == post_id), None)
@@ -63,6 +98,7 @@ def delete_post(post_id):
 
 @app.route('/api/posts/<int:post_id>', methods=['PUT'])
 def update_post(post_id):
+    """updates a post by ID, returns either updated post, status 200 or 404"""
     data = request.get_json() or {}
 
     post_to_update = next((post for post in POSTS if post["id"] == post_id), None)
@@ -83,6 +119,7 @@ def update_post(post_id):
 
 @app.route('/api/posts/search', methods=['GET'])
 def search_posts():
+    """search for posts by title or content, returns a list of matching posts"""
     title_query = request.args.get("title", "").lower()
     content_query = request.args.get("content", "").lower()
 
